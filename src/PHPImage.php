@@ -1030,12 +1030,12 @@ class PHPImage {
 			'fontFile' => $this->fontFile
 		);
 		extract(array_merge($defaults, $options), EXTR_OVERWRITE);
-		$text = $this->wrap($text, $width, $fontSize, $angle, $fontFile);
 		if ($height) {
 			$fontSize = $this->fitTobounds($fontSize, $angle, $fontFile, $text, $width, $height);
 		}
 
 		//Implement text align center inside the bounding box
+		$text = $this->wrap($text, $width, $fontSize, $angle, $fontFile);
 		if ($alignHorizontal == 'center'){
 			$textArr = explode("\n", $text);
 			//Use average line height
@@ -1089,6 +1089,14 @@ class PHPImage {
 		}
 		$ret = "";
 		$arr = explode(' ', $text);
+
+		//At first dynamically reduce font size in case the word length is longer than the width
+		//Required for textBox() for texts such as "Loremipsumdolorsitametdolorexercisemperexduoquemscribenturiuseunec inmalorum atomorum. Mea an putant legendos praesent.
+		foreach($arr as $word){
+			$wordFontSize = $this->fitToWidth($fontSize, $angle, $fontFile, $word, $width);
+			$fontSize = min($fontSize, $wordFontSize);
+		}
+
 		foreach ($arr as $word){
 			$teststring = $ret . ' ' . $word;
 			$testbox = imagettfbbox($fontSize, $angle, $fontFile, $teststring);
