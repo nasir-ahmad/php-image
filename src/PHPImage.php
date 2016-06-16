@@ -242,7 +242,7 @@ class PHPImage {
 	public function getWidth(){
 		return $this->width;
 	}
-	
+
 
 	/**
 	 * Get image resource (used when using a raw gd command)
@@ -1022,16 +1022,55 @@ class PHPImage {
 			'y' => 0,
 			'width' => 100,
 			'height' => null,
+			'alignHorizontal' => $this->alignHorizontal,
+			'alignVertical' => $this->alignVertical,
 			'angle' => $this->textAngle,
 			'strokeWidth' => $this->strokeWidth,
 			'strokeColor' => $this->strokeColor,
 			'fontFile' => $this->fontFile
 		);
 		extract(array_merge($defaults, $options), EXTR_OVERWRITE);
+		$text = $this->wrap($text, $width, $fontSize, $angle, $fontFile);
 		if ($height) {
 			$fontSize = $this->fitTobounds($fontSize, $angle, $fontFile, $text, $width, $height);
 		}
-		return $this->text($this->wrap($text, $width, $fontSize, $angle, $fontFile), array('fontSize' => $fontSize, 'x' => $x, 'y' => $y, 'angle' => $angle, 'strokeWidth' => $strokeWidth, 'opacity' => $opacity, 'fontColor' => $fontColor, 'strokeColor' => $strokeColor, 'fontFile' => $fontFile));
+
+		//Implement text align center inside the bounding box
+		if ($alignHorizontal == 'center'){
+			$textArr = explode("\n", $text);
+			//Use average line height
+			$lineHeight = 0;
+			foreach($textArr as $line){
+				$testLine = imagettfbbox($fontSize, $angle, $fontFile, $line);
+				$lineHeight += abs($testLine[7] - $testLine[1]);
+			}
+			$lineHeight /= count($textArr);
+
+			//Find y position for the first line to vertically center it inside the bounding box
+			$testBox = imagettfbbox($fontSize, $angle, $fontFile, $text);
+			$actualHeight = abs($testBox[7] - $testBox[1]);
+			$y += ($height - $actualHeight) / 2;
+
+			//Draw line by line
+			foreach($textArr as $line){
+				$this->text($line, array(
+						'x' => $x,
+						'y' => $y,
+						'alignHorizontal' => $alignHorizontal,
+						'alignVertical' => 'top',
+						'width'	=> $width,
+						'fontSize' => $fontSize,
+						'fontFile' => $fontFile,
+						'fontColor' => $fontColor,
+						'autoFit' => true,
+				));
+				$y += $lineHeight;
+			}
+		} else {
+			return $this->text($text, $options);
+		}
+
+		return $this;
 	}
 
 	/**
